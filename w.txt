@@ -1,0 +1,65 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectFromModel
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.preprocessing import StandardScaler
+
+# Load the dataset from an Excel file
+data = pd.read_excel('wine_data.xlsx')  # Replace 'wine_data.xlsx' with your file name
+
+# Explore the data
+print(data.head())  # Display the first few rows to understand the structure
+
+# Check for missing values
+print(data.isnull().sum())
+
+# Drop rows with missing values (if needed)
+data = data.dropna()
+
+# Split the data into input variables and output variable
+X = data.drop('quality', axis=1)  # Input features
+y = data['quality']  # Output variable
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Feature scaling
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# Train a random forest classifier
+clf = RandomForestClassifier(n_estimators=100, random_state=42)
+clf.fit(X_train, y_train)
+
+# Feature selection
+sfm = SelectFromModel(clf, prefit=True)
+selected_features = X.columns[sfm.get_support()]
+X_train = sfm.transform(X_train)
+X_test = sfm.transform(X_test)
+
+# Train the classifier on the selected features
+clf.fit(X_train, y_train)
+
+# Make predictions
+y_pred = clf.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy}")
+print(classification_report(y_test, y_pred))
+
+# Visualize feature importances
+feature_importances = clf.feature_importances_
+indices = np.argsort(feature_importances)[::-1]
+plt.figure()
+plt.title("Feature importances")
+plt.bar(range(X_train.shape[1]), feature_importances[indices], align="center")
+plt.xticks(range(X_train.shape[1]), selected_features, rotation=90)
+plt.xlim([-1, X_train.shape[1]])
+plt.tight_layout()
+plt.show()
